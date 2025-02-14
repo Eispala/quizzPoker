@@ -12,6 +12,10 @@ export class User
     parentRoom: Room;
     webSocket: WebSocket;
     userType: UserType;
+    answer!: number;
+    currentBet!: number;
+
+    turnOrderNumber: number = 0;
 
      constructor(Name: string, ParentRoom: Room, WebSocket: WebSocket, UserRole: UserType){
         this.name = Name;
@@ -19,5 +23,7 @@ export class User
         this.webSocket = WebSocket;
         this.userType = UserRole;
     }
+
+
 }
 
