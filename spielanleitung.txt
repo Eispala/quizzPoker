@@ -1,0 +1,90 @@
+startauftsellung: spielleiter, small blind, big blind
+Adminfunktionen: 
+- startBudget festlegen //setDefaultBudget
+- BB festlegen //setBigBlind //setSmallBlind (smallBlind = bigBlind / 2)
+
+RoundTypes:
+- firstRound = erste Runde, under-the-gun startet
+- normalRound = <n> Runden nach der ersten, erster Spieler links vom Spielleiter startet
+- lastRound = letzte runde, erster Spieler der noch im game ist links vom Spielleiter muss aufdecken, die danach koennen, muessen aber nicht
+- nach der endRound gehts wieder los bei startRound und alle Spieler sind dabei
+
+spieler muessen pro spiel reihenfolge haben, anfang random danach fest -> //generatePlayerOrder
+
+
+spielleiter startet die Runde //startRound(firstRound)
+ersten spieler Bestimmen //nextPlayer
+jetzt muss der bestimmte Spieler seinen "Zug" machen //gameAction
+
+jetz reihum
+    - //nextPlayer
+    - //gameAction
+
+nextPlayer und gameAction machen wir solange, bis:
+- ein Wert erreicht ist, bei dem entweder alle raus sind (=gefolded) oder alle auf einer summe "checken"
+
+--- ab hier hat jeder spieler entweder gesetzt oder ist raus ---
+//startRound(normalRound)
+jetzt erster tipp //showNextTip
+wieder reihum:
+    - //nextPlayer
+    - //gameAction
+nextPlayer und gameAction machen wir solange, bis:
+- ein Wert erreicht ist, bei dem entweder alle raus sind (=gefolded) oder alle auf einer summe "checken"
+
+naechsten Tipp zeigen, wieder reihum usw.
+    
+--- ab hier sind alle tips gelegt ---
+spielleiter deckt Antwort auf //showAnswer
+//startRound(lastRound)
+
+aufdeckrunde -> links vom spielleiter die erste person die noch im game ist muss aufdecken
+
+dann reihum -> kann aufdecken/folden //nextPlayer() //gameaction()
+die person die am naechsten an der Antwort dran ist, gewinnt den pot, bei mehreren gewinnern wird anteilig verteilt //splitPot //resetPot
+
+//startRound(RoundType)
+    - falls RoundType = firstRound: jeder muss seine Antwort auf die Frage einlocken(antwort nur selbst sichtbar, antwort nichtmehr anpassbar)
+    - falls RoundType = normalRound:
+    - falls RoundType = lastRound:
+
+//nextPlayer
+    - roundType firstRound
+        - erster Spieler ist "under-the-gun" (erster spieler links vom BB)
+    
+    - roundType normal
+        - beim RoundType "NormalRound" ist der erste Spieler der, welcher links vom Spielleiter sitzt und noch nicht gefolded hat
+
+    - roundType lastRound: wie bei roundType normal
+
+//gameAction
+    - roundType firstRound
+        - playerType: under-the-gun
+            - erlaubte Aktionen:
+                - fold
+                - call
+                - raise
+
+        - playerType: normal
+            - erlaubte aktionen:
+                - fold
+                - call (= einsatz auf einsatz von vorspieler erhoehen, falls kein Budget: AllIn)
+                - check (wenn aktueller einsatz = einsatz vom vorspieler)
+                - raise (wenn genug budget, ansonsten raise = AllIn)
+
+    - roundType normal
+        - playerType: egal
+        - erlaubte Aktionen: 
+            - check(nichts machen, geht nur wenn aktueller einsatz dem minimum des vorspielers enstpricht)
+            - call(mitgehen, ehoehen auf bet des vorspielers)/
+            - raise(erhoeheh)
+            - fold (rausgehen)
+
+    - roundType lastRound:
+        - erlaubte Aktionen:
+            - show ("antwort" zeigen)
+            - fold ("antwort" nicht zeigen)
+
+
+//showNextTipp
+    - setzt den RoundType auf "normal"
