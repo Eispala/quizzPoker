@@ -1,11 +1,14 @@
 import { Request, Response } from "express";
-import { User } from "../src/userController"
+import { User, UserType } from "../src/userController"
 import { WebSocket } from "ws";
-import { Socket } from "dgram";
 
 export class Room {
     id: string = "";
     users: Map<string, User> = new Map();
+    startingChips: number = 0;
+    smallBlind: number = 0;
+    bigBlind: number = 0;
+    
 
     toJSON() {
         return {
@@ -14,6 +17,15 @@ export class Room {
                 [...this.users.entries()].map(([key, user]) => [key, user.name]))
         }
     }
+
+    SetBigBlind(User: User, bigBlind: number){
+        if(User.userType === UserType.GameMaster){
+            this.bigBlind = bigBlind;
+            this.smallBlind = bigBlind/2;
+            
+        }
+    }
+    
 }
 
 interface GameRequest {
@@ -78,28 +90,31 @@ console.log(`Parsing command: ${message}`);
     }
 }
 
-function closeRoomIfNecessary(socket: WebSocket)
+function closeRoomIfNecessary(socket: WebSocket): Room | undefined
 {
-    
     if(socketUserMap.has(socket))
     {
         let socketUserMapEntry = socketUserMap.get(socket);
         if(socketUserMapEntry === undefined)
         {
-            return;
+            return undefined;
         }
 
         if(socketUserMapEntry.parentRoom.users.size - 1 <= 0)
         {
             let deletedRoomName: string = socketUserMapEntry.parentRoom.id;
             rooms.delete(socketUserMapEntry.parentRoom.id);
-            console.log(`Deleted Room: ${deletedRoomName}`)
+            console.log(`Deleted Room: ${deletedRoomName}`);
+            return undefined;
         }
         else{
             socketUserMapEntry.parentRoom.users.delete(socketUserMapEntry.name);
             console.log(`User ${socketUserMapEntry.name} removed from room ${socketUserMapEntry.parentRoom.id}`);
+            return socketUserMapEntry.parentRoom;
         }
     }
+
+    return undefined;
 }
 
 function removeSocketFromBuffer(socket: WebSocket)
@@ -114,8 +129,39 @@ function removeSocketFromBuffer(socket: WebSocket)
 
 export function disconnectUser(socket: WebSocket)
 {
-    closeRoomIfNecessary(socket);
+    let roomClosed = closeRoomIfNecessary(socket);
+    
+    if(roomClosed != undefined){
+        promoteNewAdminIfNecessary(roomClosed);
+    }
+    
     removeSocketFromBuffer(socket);
+
+}
+
+function promoteNewAdminIfNecessary(room: Room){
+    
+    if(room.users.size <= 0){
+        return;
+    }
+    
+    let roomHasAdmin:boolean = [...room.users.values()].some(user => user.userType === UserType.GameMaster);
+    
+    if(roomHasAdmin){
+       return; 
+    }
+
+    let firstUser: [string, User] | undefined = room.users.entries().next().value;
+    
+    if(firstUser === undefined){
+        return;
+    }
+    
+    let [userKey, user] = firstUser;
+    
+    user.userType = UserType.GameMaster;
+
+    console.log(`Promoted User ${user.name} to GameMaster`);
 
 }
 
@@ -186,12 +232,18 @@ export function joinRoom(gameRequest: JoinRoomRequest, socket: WebSocket, joined
         return;
     }
 
-    let user: User = new User();
-    user.name = gameRequest.userName;
-    user.webSocket = socket;
-    user.parentRoom = joinedRoom;
+    let userType: UserType;
+    if(joinedRoom.users.size === 0){
+        userType = UserType.GameMaster;
+    }
+    else{
+        userType = UserType.Player;
+    }
+
+    let user: User = new User(gameRequest.userName, joinedRoom, socket, userType);
+    
     joinedRoom.users.set(user.name, user);
-    console.log(`Added User ${user.name} to room ${joinedRoom.id}`);
+    console.log(`Added User ${user.name} to room ${joinedRoom.id}, userRole: ${user.userType}`);
     return user;
 }
 
