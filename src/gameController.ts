@@ -58,15 +58,14 @@ export class Room {
                 return;
             }
 
-            counter++;
             user.turnOrderNumber = turnOrder[counter];
 
             switch (user.turnOrderNumber) {
-                case 1:
+                case 0:
                     user.userType = UserType.SmallBlind;
 
                     break;
-                case 2:
+                case 1:
                     user.userType = UserType.BigBlind;
                     break;
 
@@ -74,9 +73,8 @@ export class Room {
                     user.userType = UserType.NormalPlayer;
                     break;
             }
-            if (user.turnOrderNumber === 1) {
-                user.userType = UserType.BigBlind;
-            }
+            
+            counter++;
         });
 
         counter = 0;

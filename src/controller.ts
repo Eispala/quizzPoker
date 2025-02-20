@@ -78,21 +78,11 @@ export function parseCommand(socket: WebSocket, message: string) {
 
                 socketUserMap.set(socket, joinAdmin);
 
-                let joinRoomRequest: JoinRoomRequest = new JoinRoomRequest();
-                joinRoomRequest.roomName = "testRoom";
-                joinRoomRequest.userName = "testUser";
-                joinRoomRequest.operation = "join"; 
-
-                let joinedUser: User | undefined = joinRoom(joinRoomRequest, socket, createdRoom);
-
-                if (joinedUser === undefined) {
-                    console.log("User was not joined");
-                    return;
-                }
-
-                console.log(`Room status: ${JSON.stringify(createdRoom)}`);
-
-                socketUserMap.set(socket, joinedUser);                
+                joinDummyUser(createdRoom, "1",socket);
+                joinDummyUser(createdRoom, "2",socket);
+                joinDummyUser(createdRoom, "3",socket);
+                joinDummyUser(createdRoom, "4",socket);
+                
                 // return;
             }
 
@@ -125,6 +115,27 @@ export function parseCommand(socket: WebSocket, message: string) {
             console.log("request could not be parsed");
             break;
     }
+}
+
+function joinDummyUser(room: Room, userName: string, socket: WebSocket){
+    
+
+    let joinRoomRequest: JoinRoomRequest = new JoinRoomRequest();
+    joinRoomRequest.roomName = room.id;
+    joinRoomRequest.userName = userName;
+    joinRoomRequest.operation = "join"; 
+
+    let joinedUser: User | undefined = joinRoom(joinRoomRequest, socket, room);
+
+    if (joinedUser === undefined) {
+        console.log("User was not joined");
+        return;
+        
+    }
+
+    console.log(`Room status: ${JSON.stringify(room)}`);
+
+    socketUserMap.set(socket, joinedUser);
 }
 
 function closeRoomIfNecessary(socket: WebSocket): Room | undefined {

@@ -88,3 +88,5 @@ die person die am naechsten an der Antwort dran ist, gewinnt den pot, bei mehrer
 
 //showNextTipp
     - setzt den RoundType auf "normal"
+
+    2-1-3-0
