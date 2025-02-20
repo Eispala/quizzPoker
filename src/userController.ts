@@ -2,10 +2,10 @@ import { WebSocket } from "ws";
 import { Room } from "../src/gameController"
 
 export enum UserType {
-    GameMaster,
-    NormalPlayer,
-    SmallBlind,
-    BigBlind
+    GameMaster = "GameMaster",
+    NormalPlayer = "NormalPlayer",
+    SmallBlind = "SmallBlind",
+    BigBlind = "BigBlind"
 
 }
 

@@ -16,6 +16,10 @@ class JoinRoomRequest extends Request {
     userName!: string;
 }
 
+class StartRoundRequest extends Request{
+}
+    
+
 let rooms: Map<string, Room> = new Map();
 
 
@@ -192,7 +196,7 @@ function roomNameAllowed(roomName: string): boolean {
     return true;
 }
 
-function createRoom(roomName: string): Room {
+export function createRoom(roomName: string): Room {
     console.log(`Creating Room: ${roomName}`)
     let newRoom: Room = new Room();
     newRoom.id = roomName;
@@ -214,7 +218,7 @@ function roomExists(roomName: string): boolean {
 
 }
 
-function joinRoom(gameRequest: JoinRoomRequest, socket: WebSocket, joinedRoom: Room): User | undefined {
+export function joinRoom(gameRequest: JoinRoomRequest, socket: WebSocket, joinedRoom: Room): User | undefined {
     if (gameRequest.userName === undefined) {
         console.log("No Username provided");
         return;
