@@ -58,7 +58,7 @@ export function parseCommand(socket: WebSocket, message: string) {
                 let joinRoomAdmin: JoinRoomRequest = new JoinRoomRequest();
                 joinRoomAdmin.roomName = "testRoom";
                 joinRoomAdmin.userName = "testAdmin";
-                joinRoomAdmin.operation = "join"; 
+                joinRoomAdmin.operation = "join";
 
                 let createdRoom: Room | undefined = createRoomWrapper(socket, joinRoomAdmin);
                 if (createdRoom === undefined) {
@@ -78,11 +78,11 @@ export function parseCommand(socket: WebSocket, message: string) {
 
                 socketUserMap.set(socket, joinAdmin);
 
-                joinDummyUser(createdRoom, "1",socket);
-                joinDummyUser(createdRoom, "2",socket);
-                joinDummyUser(createdRoom, "3",socket);
-                joinDummyUser(createdRoom, "4",socket);
-                
+                joinDummyUser(createdRoom, "1", socket);
+                joinDummyUser(createdRoom, "2", socket);
+                joinDummyUser(createdRoom, "3", socket);
+                joinDummyUser(createdRoom, "4", socket);
+
                 // return;
             }
 
@@ -117,20 +117,20 @@ export function parseCommand(socket: WebSocket, message: string) {
     }
 }
 
-function joinDummyUser(room: Room, userName: string, socket: WebSocket){
-    
+function joinDummyUser(room: Room, userName: string, socket: WebSocket) {
+
 
     let joinRoomRequest: JoinRoomRequest = new JoinRoomRequest();
     joinRoomRequest.roomName = room.id;
     joinRoomRequest.userName = userName;
-    joinRoomRequest.operation = "join"; 
+    joinRoomRequest.operation = "join";
 
     let joinedUser: User | undefined = joinRoom(joinRoomRequest, socket, room);
 
     if (joinedUser === undefined) {
         console.log("User was not joined");
         return;
-        
+
     }
 
     console.log(`Room status: ${JSON.stringify(room)}`);

@@ -1,4 +1,4 @@
-import express, {Request, Response} from "express" 
+import express, { Request, Response } from "express"
 import router from "./routes";
 import { WebSocketServer, WebSocket } from "ws";
 import { parseCommand, disconnectUser } from "./controller";
