@@ -48,6 +48,35 @@ export function parseCommand(socket: WebSocket, message: string) {
 
             break;
 
+        case "startRound":
+            if (!socketUserMap.has(socket)) {
+                console.log(`No User found for socket`);
+                return;
+            }
+
+            let user: User | undefined = socketUserMap.get(socket);
+            if (user === undefined) {
+                console.log(`User found for socket, but user is undefined?`);
+                return;
+            }
+
+            if (user.userType !== UserType.GameMaster) {
+                console.log(`User ${user.name} is not a gameMaster`);
+                return;
+            }
+
+            if(user.parentRoom === undefined){ 
+                console.log(`Parent Room of User ${user.name} is undefined`); 
+                return; 
+            }
+            
+            let room: Room | undefined = user.parentRoom;
+
+            console.log(`Admin ${user.name} started the game in room (RoomId: ${room.id})`);
+
+            break;
+
+
         default:
             console.log("request could not be parsed");
             break;

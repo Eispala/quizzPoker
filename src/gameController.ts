@@ -47,10 +47,17 @@ export class Room {
         //     return;
         // }
 
-        let turnOrder: number[] = this.generateRandomUniqueNumbers(this.users.size);
+        //bei kleinen maps stoert das keinen
+        let playerCount: number = Array.from(this.users.values()).filter(user => user.userType === UserType.NormalPlayer).length;
+
+        let turnOrder: number[] = this.generateRandomUniqueNumbers(playerCount);
 
         let counter: number = 0;
         this.users.forEach((user: User) => {
+            if (user.userType != UserType.NormalPlayer) {
+                return;
+            }
+
             counter++;
             user.turnOrderNumber = turnOrder[counter];
 
@@ -66,9 +73,6 @@ export class Room {
                 default:
                     user.userType = UserType.NormalPlayer;
                     break;
-            }
-            if (user.turnOrderNumber === 1) {
-                user.userType = UserType.BigBlind;
             }
         });
 
