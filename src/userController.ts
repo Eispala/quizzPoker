@@ -1,13 +1,15 @@
 import { WebSocket } from "ws";
-import { Room } from "../src/controller"
+import { Room } from "../src/gameController"
 
-export enum UserType{
-    GameMaster = "GM",
-    Player = "Player"
+export enum UserType {
+    GameMaster,
+    NormalPlayer,
+    SmallBlind,
+    BigBlind
+
 }
 
-export class User 
-{
+export class User {
     name: string;
     parentRoom: Room;
     webSocket: WebSocket;
@@ -17,7 +19,7 @@ export class User
 
     turnOrderNumber: number = 0;
 
-     constructor(Name: string, ParentRoom: Room, WebSocket: WebSocket, UserRole: UserType){
+    constructor(Name: string, ParentRoom: Room, WebSocket: WebSocket, UserRole: UserType) {
         this.name = Name;
         this.parentRoom = ParentRoom;
         this.webSocket = WebSocket;

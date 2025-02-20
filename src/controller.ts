@@ -2,90 +2,15 @@ import { Request, Response } from "express";
 import { User, UserType } from "../src/userController"
 import { WebSocket } from "ws";
 
-enum RoundType {
-    firstRound,
-    normalRound,
-    lastRound,
-    none
-}
+import { Room } from "../src/gameController"
 
-export class Room {
-    id: string = "";
-    users: Map<string, User> = new Map();
-    startingChips: number = 0;
-    smallBlind: number = 0;
-    bigBlind: number = 0;
-    currentPrizePool: number = 0;
-    currentRoundType: RoundType = RoundType.none;
-
-    toJSON() {
-        return {
-            id: this.id,
-            users: Object.fromEntries(
-                [...this.users.entries()].map(([key, user]) => [user.name]))
-        }
-    }
-
-    SetBigBlind(User: User, bigBlind: number) {
-        if (!this.UserIsAdmin(User)) {
-            return;
-        }
-
-        this.bigBlind = bigBlind;
-        this.smallBlind = bigBlind / 2;
-    }
-
-    SetStartingChips(User: User, startingChips: number) {
-        if (!this.UserIsAdmin(User)) {
-            return;
-        }
-
-        this.startingChips = startingChips;
-    }
-    
-
-    RandomizeTurnOrder(User: User) {
-        if (!this.UserIsAdmin(User)) {
-            return;
-        }
-
-        let turnOrder: number[] = this.generateRandomUniqueNumbers(this.users.size);
-
-        let counter: number = 0;
-        this.users.forEach((user: User) => {
-            counter++;
-            user.turnOrderNumber = turnOrder[counter];
-        });
-
-        counter = 0;
-    }
-
-    UserIsAdmin(User: User): boolean {
-        if (User.userType === UserType.GameMaster) {
-            return true;
-        }
-
-        return false;
-    }
-
-    private generateRandomUniqueNumbers(countOfNumbersToGenerate: number): number[] {
-        let numbers = Array.from({ length: countOfNumbersToGenerate }, (_, index) => index);
-
-        for (let counter = countOfNumbersToGenerate - 1; counter > 0; counter--) {
-            let random: number = Math.floor(Math.random() * (counter + 1));
-
-            [numbers[counter], numbers[random]] = [numbers[random], numbers[counter]];
-        }
-
-        return numbers;
-    }
-}
+const socketUserMap: Map<WebSocket, User> = new Map();
 
 interface GameRequest {
     operation: string;
 }
 
-export class JoinRoomRequest extends Request {
+class JoinRoomRequest extends Request {
 
     roomName!: string;
     userName!: string;
@@ -93,18 +18,6 @@ export class JoinRoomRequest extends Request {
 
 let rooms: Map<string, Room> = new Map();
 
-
-export function roomExists(roomName: string): boolean {
-    if (rooms.has(roomName)) {
-
-        return true;
-    }
-
-    return false;
-
-}
-
-const socketUserMap: Map<WebSocket, User> = new Map();
 
 export function parseCommand(socket: WebSocket, message: string) {
     console.log(`Parsing command: ${message}`);
@@ -216,7 +129,7 @@ function getExistingRoom(roomName: string): Room | undefined {
     return undefined;
 }
 
-export function createRoomWrapper(socket: WebSocket, joinRoomRequest: JoinRoomRequest): Room | undefined {
+function createRoomWrapper(socket: WebSocket, joinRoomRequest: JoinRoomRequest): Room | undefined {
 
     let roomNameIsAllowed = roomNameAllowed(joinRoomRequest.roomName);
     let existingRoom: Room | undefined = getExistingRoom(joinRoomRequest.roomName);
@@ -239,7 +152,7 @@ export function createRoomWrapper(socket: WebSocket, joinRoomRequest: JoinRoomRe
     }
 }
 
-export function roomNameAllowed(roomName: string): boolean {
+function roomNameAllowed(roomName: string): boolean {
 
     switch (roomName) {
         case "":
@@ -250,7 +163,7 @@ export function roomNameAllowed(roomName: string): boolean {
     return true;
 }
 
-export function createRoom(roomName: string): Room {
+function createRoom(roomName: string): Room {
     console.log(`Creating Room: ${roomName}`)
     let newRoom: Room = new Room();
     newRoom.id = roomName;
@@ -261,7 +174,18 @@ export function createRoom(roomName: string): Room {
 
 }
 
-export function joinRoom(gameRequest: JoinRoomRequest, socket: WebSocket, joinedRoom: Room): User | undefined {
+
+function roomExists(roomName: string): boolean {
+    if (rooms.has(roomName)) {
+
+        return true;
+    }
+
+    return false;
+
+}
+
+function joinRoom(gameRequest: JoinRoomRequest, socket: WebSocket, joinedRoom: Room): User | undefined {
     if (gameRequest.userName === undefined) {
         console.log("No Username provided");
         return;
@@ -277,7 +201,7 @@ export function joinRoom(gameRequest: JoinRoomRequest, socket: WebSocket, joined
         userType = UserType.GameMaster;
     }
     else {
-        userType = UserType.Player;
+        userType = UserType.NormalPlayer;
     }
 
     let user: User = new User(gameRequest.userName, joinedRoom, socket, userType);

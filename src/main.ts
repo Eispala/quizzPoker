@@ -35,6 +35,3 @@ webSocketServer.on("connection", (socket) => {
         console.log("User disconnected, connection closed");
     });
 });
- 
-
-
