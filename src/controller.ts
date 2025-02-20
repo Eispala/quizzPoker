@@ -106,7 +106,7 @@ export function parseCommand(socket: WebSocket, message: string) {
 
             console.log(`Admin ${user.name} started the game in room (RoomId: ${room.id})`);
 
-            room.StartRound();
+            room.StartRound_ShouldBeNewHandMaybe();
 
             break;
 

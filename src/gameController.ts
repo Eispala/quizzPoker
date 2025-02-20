@@ -1,10 +1,10 @@
 import { User, UserType } from "../src/userController";
 
 export enum RoundType {
-    firstRound,
-    normalRound,
-    lastRound,
-    none
+    firstRound = "firstRound",
+    normalRound = "normalRound",
+    lastRound = "lastRound",
+    none = "none"
 }
 
 
@@ -16,6 +16,7 @@ export class Room {
     bigBlind: number = 0;
     currentPrizePool: number = 0;
     currentRoundType: RoundType = RoundType.none;
+    playerCountWithoutGameMaster: number = 0;
 
     toJSON() {
         return {
@@ -49,6 +50,7 @@ export class Room {
 
         //bei kleinen maps stoert das keinen
         let playerCount: number = Array.from(this.users.values()).filter(user => user.userType === UserType.NormalPlayer).length;
+        this.playerCountWithoutGameMaster = playerCount;
 
         let turnOrder: number[] = this.generateRandomUniqueNumbers(playerCount);
 
@@ -73,11 +75,27 @@ export class Room {
                     user.userType = UserType.NormalPlayer;
                     break;
             }
-            
+
             counter++;
         });
 
         counter = 0;
+
+        this.NewHand_ShouldBeNewRoundMaybe();
+    }
+
+    NewHand_ShouldBeNewRoundMaybe() {
+        this.users.forEach((user: User) => {
+            if (user.userType != UserType.NormalPlayer) {
+                return;
+            }
+
+            user.turnOrderNumber += 1;
+            if (user.turnOrderNumber > this.playerCountWithoutGameMaster) {
+                user.turnOrderNumber = 0;
+            }
+
+        })
     }
 
     UserIsAdmin(User: User): boolean {
@@ -116,10 +134,9 @@ export class Room {
 
     }
 
-    StartRound() {
-        this.RandomizeTurnOrder();
-
+    StartRound_ShouldBeNewHandMaybe() {
         this.currentRoundType = RoundType.firstRound;
+        this.RandomizeTurnOrder();
 
     }
 
