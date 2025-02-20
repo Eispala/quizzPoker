@@ -74,6 +74,9 @@ export class Room {
                     user.userType = UserType.NormalPlayer;
                     break;
             }
+            if (user.turnOrderNumber === 1) {
+                user.userType = UserType.BigBlind;
+            }
         });
 
         counter = 0;

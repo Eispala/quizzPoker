@@ -6,19 +6,18 @@ import { Room } from "../src/gameController"
 
 const socketUserMap: Map<WebSocket, User> = new Map();
 
-interface GameRequest {
-    operation: string;
+class GameRequest {
+    operation!: string;
 }
 
-class JoinRoomRequest extends Request {
-
+class JoinRoomRequest extends GameRequest {
     roomName!: string;
     userName!: string;
 }
 
-class StartRoundRequest extends Request{
+class StartRoundRequest {
 }
-    
+
 
 let rooms: Map<string, Room> = new Map();
 
@@ -54,8 +53,31 @@ export function parseCommand(socket: WebSocket, message: string) {
 
         case "startRound":
             if (!socketUserMap.has(socket)) {
-                console.log(`No User found for socket`);
-                return;
+                // console.log(`No User found for socket`);
+
+                let joinRoomRequest: JoinRoomRequest = new JoinRoomRequest();
+                joinRoomRequest.roomName = "testRoom";
+                joinRoomRequest.userName = "testUser";
+                joinRoomRequest.operation = "join"; 
+                
+                let createdRoom: Room | undefined = createRoomWrapper(socket, joinRoomRequest);
+                if (createdRoom === undefined) {
+                    console.log("Room was not created");
+                    return;
+                }
+
+                console.log(`Joining room`);
+                let joinedUser: User | undefined = joinRoom(joinRoomRequest, socket, createdRoom);
+
+                if (joinedUser === undefined) {
+                    console.log("User was not joined");
+                    return;
+                }
+
+                console.log(`Room status: ${JSON.stringify(createdRoom)}`);
+
+                socketUserMap.set(socket, joinedUser);
+                // return;
             }
 
             let user: User | undefined = socketUserMap.get(socket);
@@ -69,14 +91,16 @@ export function parseCommand(socket: WebSocket, message: string) {
                 return;
             }
 
-            if(user.parentRoom === undefined){ 
-                console.log(`Parent Room of User ${user.name} is undefined`); 
-                return; 
+            if (user.parentRoom === undefined) {
+                console.log(`Parent Room of User ${user.name} is undefined`);
+                return;
             }
-            
+
             let room: Room | undefined = user.parentRoom;
 
             console.log(`Admin ${user.name} started the game in room (RoomId: ${room.id})`);
+
+            room.StartRound();
 
             break;
 
