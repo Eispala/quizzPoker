@@ -55,18 +55,34 @@ export function parseCommand(socket: WebSocket, message: string) {
             if (!socketUserMap.has(socket)) {
                 // console.log(`No User found for socket`);
 
-                let joinRoomRequest: JoinRoomRequest = new JoinRoomRequest();
-                joinRoomRequest.roomName = "testRoom";
-                joinRoomRequest.userName = "testUser";
-                joinRoomRequest.operation = "join"; 
-                
-                let createdRoom: Room | undefined = createRoomWrapper(socket, joinRoomRequest);
+                let joinRoomAdmin: JoinRoomRequest = new JoinRoomRequest();
+                joinRoomAdmin.roomName = "testRoom";
+                joinRoomAdmin.userName = "testAdmin";
+                joinRoomAdmin.operation = "join"; 
+
+                let createdRoom: Room | undefined = createRoomWrapper(socket, joinRoomAdmin);
                 if (createdRoom === undefined) {
                     console.log("Room was not created");
                     return;
                 }
 
                 console.log(`Joining room`);
+                let joinAdmin: User | undefined = joinRoom(joinRoomAdmin, socket, createdRoom);
+
+                if (joinAdmin === undefined) {
+                    console.log("User was not joined");
+                    return;
+                }
+
+                console.log(`Room status: ${JSON.stringify(createdRoom)}`);
+
+                socketUserMap.set(socket, joinAdmin);
+
+                let joinRoomRequest: JoinRoomRequest = new JoinRoomRequest();
+                joinRoomRequest.roomName = "testRoom";
+                joinRoomRequest.userName = "testUser";
+                joinRoomRequest.operation = "join"; 
+
                 let joinedUser: User | undefined = joinRoom(joinRoomRequest, socket, createdRoom);
 
                 if (joinedUser === undefined) {
@@ -76,7 +92,7 @@ export function parseCommand(socket: WebSocket, message: string) {
 
                 console.log(`Room status: ${JSON.stringify(createdRoom)}`);
 
-                socketUserMap.set(socket, joinedUser);
+                socketUserMap.set(socket, joinedUser);                
                 // return;
             }
 
@@ -86,10 +102,10 @@ export function parseCommand(socket: WebSocket, message: string) {
                 return;
             }
 
-            if (user.userType !== UserType.GameMaster) {
-                console.log(`User ${user.name} is not a gameMaster`);
-                return;
-            }
+            // if (user.userType !== UserType.GameMaster) {
+            //     console.log(`User ${user.name} is not a gameMaster`);
+            //     return;
+            // }
 
             if (user.parentRoom === undefined) {
                 console.log(`Parent Room of User ${user.name} is undefined`);
