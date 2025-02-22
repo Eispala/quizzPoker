@@ -8,7 +8,7 @@ export enum RoundType {
 }
 
 
-export class Room {
+export class Game {
     id: string = "";
     users: Map<string, User> = new Map();
     startingChips: number = 0;

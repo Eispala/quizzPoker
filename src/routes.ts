@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createRoom, helloWorld, joinRoom } from "./controller";
+import { createGame, helloWorld, joinGame } from "./controller";
 
 const router = Router();
 

@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { User, UserType } from "../src/userController"
 import { WebSocket } from "ws";
 
-import { Room } from "../src/gameController"
+import { Game } from "../src/gameController"
 
 const socketUserMap: Map<WebSocket, User> = new Map();
 
@@ -10,8 +10,8 @@ class GameRequest {
     operation!: string;
 }
 
-class JoinRoomRequest extends GameRequest {
-    roomName!: string;
+class JoinGameRequest extends GameRequest {
+    gameName!: string;
     userName!: string;
 }
 
@@ -19,7 +19,7 @@ class StartRoundRequest {
 }
 
 
-let rooms: Map<string, Room> = new Map();
+let games: Map<string, Game> = new Map();
 
 
 export function parseCommand(socket: WebSocket, message: string) {
@@ -30,22 +30,22 @@ export function parseCommand(socket: WebSocket, message: string) {
     switch (request.operation) {
         case "join":
             console.log("Parsing join-reqeust");
-            let joinRoomRequest: JoinRoomRequest = JSON.parse(message);
-            let createdRoom: Room | undefined = createRoomWrapper(socket, joinRoomRequest);
-            if (createdRoom === undefined) {
-                console.log("Room was not created");
+            let joinGameRequest: JoinGameRequest = JSON.parse(message);
+            let createdGame: Game | undefined = createGameWrapper(socket, joinGameRequest);
+            if (createdGame === undefined) {
+                console.log("Game was not created");
                 return;
             }
 
-            console.log(`Joining room`);
-            let joinedUser: User | undefined = joinRoom(joinRoomRequest, socket, createdRoom);
+            console.log(`Joining game`);
+            let joinedUser: User | undefined = joinGame(joinGameRequest, socket, createdGame);
 
             if (joinedUser === undefined) {
                 console.log("User was not joined");
                 return;
             }
 
-            console.log(`Room status: ${JSON.stringify(createdRoom)}`);
+            console.log(`Game status: ${JSON.stringify(createdGame)}`);
 
             socketUserMap.set(socket, joinedUser);
 
@@ -55,33 +55,33 @@ export function parseCommand(socket: WebSocket, message: string) {
             if (!socketUserMap.has(socket)) {
                 // console.log(`No User found for socket`);
 
-                let joinRoomAdmin: JoinRoomRequest = new JoinRoomRequest();
-                joinRoomAdmin.roomName = "testRoom";
-                joinRoomAdmin.userName = "testAdmin";
-                joinRoomAdmin.operation = "join";
+                let joinGameAsAdmin: JoinGameRequest = new JoinGameRequest();
+                joinGameAsAdmin.gameName = "testGame";
+                joinGameAsAdmin.userName = "testAdmin";
+                joinGameAsAdmin.operation = "join";
 
-                let createdRoom: Room | undefined = createRoomWrapper(socket, joinRoomAdmin);
-                if (createdRoom === undefined) {
-                    console.log("Room was not created");
+                let createdGame: Game | undefined = createGameWrapper(socket, joinGameAsAdmin);
+                if (createdGame === undefined) {
+                    console.log("Game was not created");
                     return;
                 }
 
-                console.log(`Joining room`);
-                let joinAdmin: User | undefined = joinRoom(joinRoomAdmin, socket, createdRoom);
+                console.log(`Joining Game`);
+                let joinAdmin: User | undefined = joinGame(joinGameAsAdmin, socket, createdGame);
 
                 if (joinAdmin === undefined) {
                     console.log("User was not joined");
                     return;
                 }
 
-                console.log(`Room status: ${JSON.stringify(createdRoom)}`);
+                console.log(`game status: ${JSON.stringify(createdGame)}`);
 
                 socketUserMap.set(socket, joinAdmin);
 
-                joinDummyUser(createdRoom, "1", socket);
-                joinDummyUser(createdRoom, "2", socket);
-                joinDummyUser(createdRoom, "3", socket);
-                joinDummyUser(createdRoom, "4", socket);
+                joinDummyUser(createdGame, "1", socket);
+                joinDummyUser(createdGame, "2", socket);
+                joinDummyUser(createdGame, "3", socket);
+                joinDummyUser(createdGame, "4", socket);
 
                 // return;
             }
@@ -97,16 +97,16 @@ export function parseCommand(socket: WebSocket, message: string) {
             //     return;
             // }
 
-            if (user.parentRoom === undefined) {
-                console.log(`Parent Room of User ${user.name} is undefined`);
+            if (user.Game === undefined) {
+                console.log(`Parent game of User ${user.name} is undefined`);
                 return;
             }
 
-            let room: Room | undefined = user.parentRoom;
+            let game: Game | undefined = user.Game;
 
-            console.log(`Admin ${user.name} started the game in room (RoomId: ${room.id})`);
+            console.log(`Admin ${user.name} started the game in game (GameId: ${game.id})`);
 
-            room.StartRound_ShouldBeNewHandMaybe();
+            game.StartRound_ShouldBeNewHandMaybe();
 
             break;
 
@@ -117,15 +117,15 @@ export function parseCommand(socket: WebSocket, message: string) {
     }
 }
 
-function joinDummyUser(room: Room, userName: string, socket: WebSocket) {
+function joinDummyUser(game: Game, userName: string, socket: WebSocket) {
 
 
-    let joinRoomRequest: JoinRoomRequest = new JoinRoomRequest();
-    joinRoomRequest.roomName = room.id;
-    joinRoomRequest.userName = userName;
-    joinRoomRequest.operation = "join";
+    let joinGameRequest: JoinGameRequest = new JoinGameRequest();
+    joinGameRequest.gameName = game.id;
+    joinGameRequest.userName = userName;
+    joinGameRequest.operation = "join";
 
-    let joinedUser: User | undefined = joinRoom(joinRoomRequest, socket, room);
+    let joinedUser: User | undefined = joinGame(joinGameRequest, socket, game);
 
     if (joinedUser === undefined) {
         console.log("User was not joined");
@@ -133,28 +133,28 @@ function joinDummyUser(room: Room, userName: string, socket: WebSocket) {
 
     }
 
-    console.log(`Room status: ${JSON.stringify(room)}`);
+    console.log(`Game status: ${JSON.stringify(game)}`);
 
     socketUserMap.set(socket, joinedUser);
 }
 
-function closeRoomIfNecessary(socket: WebSocket): Room | undefined {
+function closeGameIfNecessary(socket: WebSocket): Game | undefined {
     if (socketUserMap.has(socket)) {
         let socketUserMapEntry = socketUserMap.get(socket);
         if (socketUserMapEntry === undefined) {
             return undefined;
         }
 
-        if (socketUserMapEntry.parentRoom.users.size - 1 <= 0) {
-            let deletedRoomName: string = socketUserMapEntry.parentRoom.id;
-            rooms.delete(socketUserMapEntry.parentRoom.id);
-            console.log(`Deleted Room: ${deletedRoomName}`);
+        if (socketUserMapEntry.Game.users.size - 1 <= 0) {
+            let deletedGameName: string = socketUserMapEntry.Game.id;
+            games.delete(socketUserMapEntry.Game.id);
+            console.log(`Deleted Game: ${deletedGameName}`);
             return undefined;
         }
         else {
-            socketUserMapEntry.parentRoom.users.delete(socketUserMapEntry.name);
-            console.log(`User ${socketUserMapEntry.name} removed from room ${socketUserMapEntry.parentRoom.id}`);
-            return socketUserMapEntry.parentRoom;
+            socketUserMapEntry.Game.users.delete(socketUserMapEntry.name);
+            console.log(`User ${socketUserMapEntry.name} removed from game ${socketUserMapEntry.Game.id}`);
+            return socketUserMapEntry.Game;
         }
     }
 
@@ -170,29 +170,29 @@ function removeSocketFromBuffer(socket: WebSocket) {
 }
 
 export function disconnectUser(socket: WebSocket) {
-    let roomClosed = closeRoomIfNecessary(socket);
+    let gameClosed = closeGameIfNecessary(socket);
 
-    if (roomClosed != undefined) {
-        promoteNewAdminIfNecessary(roomClosed);
+    if (gameClosed != undefined) {
+        promoteNewAdminIfNecessary(gameClosed);
     }
 
     removeSocketFromBuffer(socket);
 
 }
 
-function promoteNewAdminIfNecessary(room: Room) {
+function promoteNewAdminIfNecessary(game: Game) {
 
-    if (room.users.size <= 0) {
+    if (game.users.size <= 0) {
         return;
     }
 
-    let roomHasAdmin: boolean = [...room.users.values()].some(user => user.userType === UserType.GameMaster);
+    let gameHasAdmin: boolean = [...game.users.values()].some(user => user.userType === UserType.GameMaster);
 
-    if (roomHasAdmin) {
+    if (gameHasAdmin) {
         return;
     }
 
-    let firstUser: [string, User] | undefined = room.users.entries().next().value;
+    let firstUser: [string, User] | undefined = game.users.entries().next().value;
 
     if (firstUser === undefined) {
         return;
@@ -206,39 +206,39 @@ function promoteNewAdminIfNecessary(room: Room) {
 
 }
 
-function getExistingRoom(roomName: string): Room | undefined {
-    if (rooms.has(roomName)) {
-        return rooms.get(roomName);
+function getExistingGame(gameName: string): Game | undefined {
+    if (games.has(gameName)) {
+        return games.get(gameName);
     }
     return undefined;
 }
 
-function createRoomWrapper(socket: WebSocket, joinRoomRequest: JoinRoomRequest): Room | undefined {
+function createGameWrapper(socket: WebSocket, joinGameRequest: JoinGameRequest): Game | undefined {
 
-    let roomNameIsAllowed = roomNameAllowed(joinRoomRequest.roomName);
-    let existingRoom: Room | undefined = getExistingRoom(joinRoomRequest.roomName);
-    if (existingRoom === undefined) {
-        if (!roomNameIsAllowed) {
-            socket.send(`RoomName ${joinRoomRequest.roomName} is not allowed`);
+    let gameNameIsAllowed = gameNameAllowed(joinGameRequest.gameName);
+    let existingGame: Game | undefined = getExistingGame(joinGameRequest.gameName);
+    if (existingGame === undefined) {
+        if (!gameNameIsAllowed) {
+            socket.send(`GameName ${joinGameRequest.gameName} is not allowed`);
             return undefined;
 
         }
 
-        let createdRoom = createRoom(joinRoomRequest.roomName);
-        console.log(`Created Room: ${JSON.stringify(createdRoom)}`);
-        socket.send(`${JSON.stringify(createdRoom)}`);
+        let createdGame = createGame(joinGameRequest.gameName);
+        console.log(`Created Game: ${JSON.stringify(createdGame)}`);
+        socket.send(`${JSON.stringify(createdGame)}`);
 
-        return createdRoom;
+        return createdGame;
 
     }
     else {
-        return existingRoom;
+        return existingGame;
     }
 }
 
-function roomNameAllowed(roomName: string): boolean {
+function gameNameAllowed(gameName: string): boolean {
 
-    switch (roomName) {
+    switch (gameName) {
         case "":
             return false;
 
@@ -247,20 +247,20 @@ function roomNameAllowed(roomName: string): boolean {
     return true;
 }
 
-export function createRoom(roomName: string): Room {
-    console.log(`Creating Room: ${roomName}`)
-    let newRoom: Room = new Room();
-    newRoom.id = roomName;
+export function createGame(gameName: string): Game {
+    console.log(`Creating Game: ${gameName}`)
+    let newGame: Game = new Game();
+    newGame.id = gameName;
 
-    rooms.set(newRoom.id, newRoom);
+    games.set(newGame.id, newGame);
 
-    return newRoom;
+    return newGame;
 
 }
 
 
-function roomExists(roomName: string): boolean {
-    if (rooms.has(roomName)) {
+function gameExists(gameName: string): boolean {
+    if (games.has(gameName)) {
 
         return true;
     }
@@ -269,29 +269,29 @@ function roomExists(roomName: string): boolean {
 
 }
 
-export function joinRoom(gameRequest: JoinRoomRequest, socket: WebSocket, joinedRoom: Room): User | undefined {
+export function joinGame(gameRequest: JoinGameRequest, socket: WebSocket, joinedGame: Game): User | undefined {
     if (gameRequest.userName === undefined) {
         console.log("No Username provided");
         return;
     }
 
-    if (joinedRoom.users.has(gameRequest.userName)) {
-        console.log(`User ${gameRequest.userName} already is in the room`);
+    if (joinedGame.users.has(gameRequest.userName)) {
+        console.log(`User ${gameRequest.userName} already is in the Game`);
         return;
     }
 
     let userType: UserType;
-    if (joinedRoom.users.size === 0) {
+    if (joinedGame.users.size === 0) {
         userType = UserType.GameMaster;
     }
     else {
         userType = UserType.NormalPlayer;
     }
 
-    let user: User = new User(gameRequest.userName, joinedRoom, socket, userType);
+    let user: User = new User(gameRequest.userName, joinedGame, socket, userType);
 
-    joinedRoom.users.set(user.name, user);
-    console.log(`Added User ${user.name} to room ${joinedRoom.id}, userRole: ${user.userType}`);
+    joinedGame.users.set(user.name, user);
+    console.log(`Added User ${user.name} to Game ${joinedGame.id}, userRole: ${user.userType}`);
     return user;
 }
 
