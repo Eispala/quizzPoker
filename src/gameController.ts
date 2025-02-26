@@ -26,13 +26,14 @@ export class Game {
         }
     }
 
-    SetBigBlindAmount(User: User, bigBlind: number) {
+    SetBigBlindAmount(User: User, bigBlind: number): boolean {
         if (!this.UserIsAdmin(User)) {
-            return;
+            return false;
         }
 
         this.bigBlind = bigBlind;
         this.smallBlind = bigBlind / 2;
+        return true;
     }
 
     SetStartingChipsAmount(User: User, startingChips: number) {
@@ -81,10 +82,15 @@ export class Game {
 
         counter = 0;
 
-        this.NewHand_ShouldBeNewRoundMaybe();
+        this.NextRound();
     }
 
-    NewHand_ShouldBeNewRoundMaybe() {
+    NextRound() {
+        this.MovePlayers();
+
+    }
+
+    MovePlayers() {
         this.users.forEach((user: User) => {
             if (user.userType != UserType.NormalPlayer) {
                 return;
@@ -95,7 +101,8 @@ export class Game {
                 user.turnOrderNumber = 0;
             }
 
-        })
+        });
+
     }
 
     UserIsAdmin(User: User): boolean {
@@ -134,7 +141,11 @@ export class Game {
 
     }
 
-    StartRound_ShouldBeNewHandMaybe() {
+    StartRound() {
+        
+    }
+
+    NewHand() {
         this.currentRoundType = RoundType.firstRound;
         this.RandomizeTurnOrder();
 

@@ -6,16 +6,20 @@ import { Game } from "../src/gameController"
 
 const socketUserMap: Map<WebSocket, User> = new Map();
 
-class GameRequest {
+export class GameRequest {
     operation!: string;
 }
 
-class JoinGameRequest extends GameRequest {
+export class JoinGameRequest extends GameRequest {
     gameName!: string;
     userName!: string;
 }
 
-class StartRoundRequest {
+export class SetBigBlindAmountRequest extends GameRequest {
+    amount!: number;
+}
+
+export class StartRoundRequest extends GameRequest {
 }
 
 
@@ -27,94 +31,115 @@ export function parseCommand(socket: WebSocket, message: string) {
 
     let request: GameRequest = JSON.parse(message);
 
-    switch (request.operation) {
-        case "join":
-            console.log("Parsing join-reqeust");
-            let joinGameRequest: JoinGameRequest = JSON.parse(message);
-            let createdGame: Game | undefined = createGameWrapper(socket, joinGameRequest);
-            if (createdGame === undefined) {
-                console.log("Game was not created");
-                return;
-            }
+    let user: User | undefined;
 
-            console.log(`Joining game`);
-            let joinedUser: User | undefined = joinGame(joinGameRequest, socket, createdGame);
+    if (socketUserMap.has(socket)) {
+        user = socketUserMap.get(socket);
+    }
 
-            if (joinedUser === undefined) {
-                console.log("User was not joined");
-                return;
-            }
-
-            console.log(`Game status: ${JSON.stringify(createdGame)}`);
-
-            socketUserMap.set(socket, joinedUser);
-
-            break;
-
-        case "startRound":
-            if (!socketUserMap.has(socket)) {
-                // console.log(`No User found for socket`);
-
-                let joinGameAsAdmin: JoinGameRequest = new JoinGameRequest();
-                joinGameAsAdmin.gameName = "testGame";
-                joinGameAsAdmin.userName = "testAdmin";
-                joinGameAsAdmin.operation = "join";
-
-                let createdGame: Game | undefined = createGameWrapper(socket, joinGameAsAdmin);
+    try {
+        switch (request.operation) {
+            case "joinGame":
+                console.log("Parsing join-reqeust");
+                let joinGameRequest: JoinGameRequest = JSON.parse(message);
+                let createdGame: Game | undefined = createGameWrapper(socket, joinGameRequest);
                 if (createdGame === undefined) {
                     console.log("Game was not created");
+                    socket.send("joinGame: failed");
                     return;
                 }
 
-                console.log(`Joining Game`);
-                let joinAdmin: User | undefined = joinGame(joinGameAsAdmin, socket, createdGame);
+                console.log(`Joining game`);
+                let joinedUser: User | undefined = joinGame(joinGameRequest, socket, createdGame);
 
-                if (joinAdmin === undefined) {
+                if (joinedUser === undefined) {
                     console.log("User was not joined");
+                    socket.send("joinGame: failed");
                     return;
                 }
 
-                console.log(`game status: ${JSON.stringify(createdGame)}`);
 
-                socketUserMap.set(socket, joinAdmin);
+                socketUserMap.set(socket, joinedUser);
+                socket.send("joinGame: success");
 
-                joinDummyUser(createdGame, "1", socket);
-                joinDummyUser(createdGame, "2", socket);
-                joinDummyUser(createdGame, "3", socket);
-                joinDummyUser(createdGame, "4", socket);
+                break;
 
-                // return;
-            }
+            case "startGame":
+                if (user === undefined) {
+                    console.log(`User found for socket, but user is undefined?`);
+                    socket.send("startGame: failed");
+                    return;
+                }
 
-            let user: User | undefined = socketUserMap.get(socket);
-            if (user === undefined) {
-                console.log(`User found for socket, but user is undefined?`);
-                return;
-            }
+                if (user.userType !== UserType.GameMaster) {
+                    console.log(`User ${user.name} is not a gameMaster`);
+                    socket.send("startGame: failed");
+                    return;
+                }
 
-            // if (user.userType !== UserType.GameMaster) {
-            //     console.log(`User ${user.name} is not a gameMaster`);
-            //     return;
-            // }
+                if (user.Game === undefined) {
+                    console.log(`Parent game of User ${user.name} is undefined`);
+                    socket.send("startGame: failed");
+                    return;
+                }
 
-            if (user.Game === undefined) {
-                console.log(`Parent game of User ${user.name} is undefined`);
-                return;
-            }
+                let game: Game | undefined = user.Game;
 
-            let game: Game | undefined = user.Game;
+                console.log(`Admin ${user.name} started the game in game (GameId: ${game.id})`);
 
-            console.log(`Admin ${user.name} started the game in game (GameId: ${game.id})`);
+                game.StartRound();
 
-            game.StartRound_ShouldBeNewHandMaybe();
+                socket.send("startGame: successful");
+                break;
 
-            break;
+            case "setBigBlind":
+                let gameOfUser: Game | undefined = getGameOfUser(socket);
+                if (gameOfUser === undefined) {
+                    console.log(`Game of socket not found`);
+                    socket.send("setBigBlind: failed");
+                    return;
+                }
 
+                let setBigBlindRequest: SetBigBlindAmountRequest | undefined = JSON.parse(message);
 
-        default:
-            console.log("request could not be parsed");
-            break;
+                if (setBigBlindRequest === undefined) {
+                    console.log(`BigBlindRequest could not be parsed`);
+                    socket.send("setBigBlind: failed");
+                    return;
+                }
+
+                if (user === undefined) {
+                    console.log(`User is undefined`);
+                    socket.send("setBigBlind: failed");
+                    return;
+                }
+
+                if(gameOfUser.SetBigBlindAmount(user, setBigBlindRequest.amount)){
+                    console.log(`BigBlind / SmallBlind set, Values: BigBlind: ${gameOfUser.bigBlind}, SmallBlind: ${gameOfUser.smallBlind}`);
+                }
+                socket.send("setBigBlind: success");
+
+                break;
+
+            default:
+                console.log("request could not be parsed");
+                break;
+        }
+    } catch (exception) {
+        socket.send("error");
+        console.log(`error, request: ${JSON.stringify(request)}`);
+        console.log(`${exception}`);
     }
+
+    console.log("-----------------------------------");
+}
+
+function getGameOfUser(socket: WebSocket): Game | undefined {
+    if (!socketUserMap.has(socket)) {
+        return;
+    }
+
+    return socketUserMap.get(socket)?.Game;
 }
 
 function joinDummyUser(game: Game, userName: string, socket: WebSocket) {
@@ -123,7 +148,7 @@ function joinDummyUser(game: Game, userName: string, socket: WebSocket) {
     let joinGameRequest: JoinGameRequest = new JoinGameRequest();
     joinGameRequest.gameName = game.id;
     joinGameRequest.userName = userName;
-    joinGameRequest.operation = "join";
+    joinGameRequest.operation = "joinGame";
 
     let joinedUser: User | undefined = joinGame(joinGameRequest, socket, game);
 
@@ -214,19 +239,18 @@ function getExistingGame(gameName: string): Game | undefined {
 }
 
 function createGameWrapper(socket: WebSocket, joinGameRequest: JoinGameRequest): Game | undefined {
-
     let gameNameIsAllowed = gameNameAllowed(joinGameRequest.gameName);
     let existingGame: Game | undefined = getExistingGame(joinGameRequest.gameName);
     if (existingGame === undefined) {
         if (!gameNameIsAllowed) {
-            socket.send(`GameName ${joinGameRequest.gameName} is not allowed`);
+            //socket.send(`GameName ${joinGameRequest.gameName} is not allowed`);
             return undefined;
 
         }
 
         let createdGame = createGame(joinGameRequest.gameName);
         console.log(`Created Game: ${JSON.stringify(createdGame)}`);
-        socket.send(`${JSON.stringify(createdGame)}`);
+        //socket.send(`${JSON.stringify(createdGame)}`);
 
         return createdGame;
 

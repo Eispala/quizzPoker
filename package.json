@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "artillery run tests/main.yaml",
     "start": "node dist/main.ts",
-    "dev": "ts-node src/maints",
+    "dev": "ts-node src/main.ts",
     "build": "tsc"
   },
   "keywords": [],
@@ -16,6 +16,7 @@
     "@types/express": "^5.0.0",
     "@types/node": "^22.13.4",
     "@types/ws": "^8.5.14",
+    "artillery": "^2.0.22",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.3"
   },
