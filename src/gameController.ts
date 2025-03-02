@@ -142,7 +142,15 @@ export class Game {
     }
 
     StartRound() {
-        
+        switch (this.currentRoundType) {
+            case RoundType.firstRound:
+                this.currentRoundType = RoundType.normalRound;
+                this.getNextPlayer();
+                break;
+
+            case RoundType.normalRound:
+                break;
+        }
     }
 
     NewHand() {
